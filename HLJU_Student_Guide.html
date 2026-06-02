@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HLJU International Student Guide | 黑龙江大学留学生导航</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'zone-a': '#3B82F6',
+                        'zone-b': '#22C55E', 
+                        'zone-c': '#F97316',
+                        'hlju': '#1E40AF',
+                        'dorm': '#6B7280'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .map-container { position: relative; width: 100%; max-width: 1200px; margin: 0 auto; }
+        .hotspot { position: absolute; cursor: pointer; transition: all 0.3s ease; }
+        .hotspot:hover { transform: scale(1.15); filter: brightness(1.2); }
+        .hotspot-dot { width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; 
+                      box-shadow: 0 2px 10px rgba(0,0,0,0.4); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .tab-active { border-bottom: 3px solid #1E40AF; color: #1E40AF; font-weight: 600; }
+        .phrase-card { transition: all 0.2s; }
+        .phrase-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- ==================== 配置区域：修改下面的数据即可 ==================== -->
+<script>
+// ============================================
+// 1. 地图配置 - 修改坐标请调整下面的百分比数值
+// 格式: left: 横向位置(0-100%), top: 纵向位置(0-100%)
+// 提示: 数值越大，位置越靠右/靠下
+// ============================================
+const MAP_CONFIG = {
+    // 地图图片文件名（如果要换地图，改这里）
+    imageSrc: "map.jpg",
+    
+    // 地点坐标配置
+   // 地点坐标配置 - 基于地图实际布局（地图主体偏右，左侧有文字区域）
+locations: {
+    // 南一门 - 底部"南1门"文字上方
+    s1: { left: 36, top: 92, color: "bg-red-500", title: "南一门", titleEn: "South Gate 1" },
+    
+    // 正门 - 左侧"正门"文字右侧，橙色箭头位置（往右移）
+    mg: { left: 28, top: 48, color: "bg-red-500", title: "正门", titleEn: "Main Gate" },
+    
+    // 南三门 - 底部最右侧"南3门"（往右上移）
+    s3: { left: 78, top: 88, color: "bg-red-500", title: "南三门", titleEn: "South Gate 3" },
+    
+    // 国际文化教育学院 - A区左下，粉色建筑
+    ice: { left: 30, top: 75, color: "bg-zone-a", title: "国际学院", titleEn: "Int'l College" },
+    
+    // A区留学生公寓 - 左下灰色建筑，橙色标签"International Student Apartment Zone A"
+    dA: { left: 33, top: 82, color: "bg-dorm", title: "A区公寓", titleEn: "Dorm A" },
+    
+    // 丽泽雅苑 - 右下C区，橙色建筑，标注"Lize Hotel"（往右上移）
+    lz: { left: 90, top: 74, color: "bg-zone-c", title: "丽泽雅苑", titleEn: "Lize Hotel" },
+    
+    // 主楼 - 左上黄色建筑"Main Building"（往右移）
+    mb: { left: 36, top: 42, color: "bg-zone-a", title: "主楼", titleEn: "Main Bldg" },
+    
+    // 图书馆 - 中上"Library"（往右移）
+    lib: { left: 54, top: 42, color: "bg-zone-a", title: "图书馆", titleEn: "Library" },
+    
+    // A区食堂 - 中下"A Refectory"（往右移）
+    ca: { left: 58, top: 74, color: "bg-zone-a", title: "A区食堂", titleEn: "Canteen A" }
+    
+    // 注：已移除校医院和保卫处点位
+}
+};
+
+// ============================================
+// 2. 电话号码配置 - 修改下面的号码即可
+// ============================================
+const PHONE_NUMBERS = [
+    {
+        name: "留学生办公室",
+        nameEn: "International Student Office",
+        number: "86608417",
+        icon: "fa-user-tie",
+        color: "bg-blue-100 text-blue-600",
+        important: false
+    },
+    {
+        name: "A区公寓服务台",
+        nameEn: "Zone A Service Desk",
+        number: "86684740",
+        icon: "fa-bell-concierge",
+        color: "bg-green-100 text-green-600",
+        important: false
+    },
+    {
+        name: "A区公寓前台",
+        nameEn: "Zone A Front Desk",
+        number: "86608733",
+        icon: "fa-building-user",
+        color: "bg-purple-100 text-purple-600",
+        important: false
+    },
+    {
+        name: "丽泽雅苑酒店",
+        nameEn: "Lize Hotel",
+        number: "045155107888",
+        icon: "fa-hotel",
+        color: "bg-orange-100 text-orange-600",
+        important: false
+    },
+    {
+        name: "校医院 (24h急诊)",
+        nameEn: "Campus Clinic (24h Emergency)",
+        number: "86608120",
+        icon: "fa-truck-medical",
+        color: "bg-red-100 text-red-600",
+        important: true,
+        bgColor: "bg-red-50 border-red-200"
+    },
+    {
+        name: "保卫处 (紧急)",
+        nameEn: "Campus Security (Emergency)",
+        number: "86609110",
+        icon: "fa-shield-halved",
+        color: "bg-yellow-100 text-yellow-700",
+        important: true,
+        bgColor: "bg-yellow-50 border-yellow-200"
+    }
+];
+
+// ============================================
+// 3. 地点详细信息配置
+// ============================================
+const LOCATION_DETAILS = {
+    s1: {
+        title: "南一门 South Gate 1",
+        desc: "学府路与学府四道街交叉口 | Intersection of Xuefu Road & Xuefu 4th St",
+        routes: [
+            { to: "A区留学生公寓", toEn: "To Zone A Dorm", 
+              path: "从国际文化教育学院向南直行,再左转,前方就是A区留学生公寓。", pathEn: "Walk straight south from the College of International Culture and Education, then turn left. You will see the International Student Dormitory." },
+            { to: "国际文化教育学院", toEn: "To Int'l College", 
+              path: "从南一门入校，在左侧第二个路口左转,直行约100米,红色建筑即为国际文化教育学院，到达后在此左转。", pathEn: "Enter the campus from South Gate 1. Take the second turn on the left and walk straight for about 100 meters. The red building is the College of International Culture and Education. Turn left when you get there." }
+        ]
+    },
+    s3: {
+        title: "南三门 South Gate 3",
+        desc: "学府四道街东段 | East section of Xuefu 4th St",
+        routes: [
+            { to: "丽泽雅苑酒店", toEn: "To Lize Hotel", 
+              path: "进门沿右环道行走即可看见丽泽雅苑（灰色建筑）", pathEn: "Enter the area and follow the right roundabout,and you will see Lize Hotel." }
+        ]
+    },
+    mg: {
+        title: "正门 Main Gate",
+        desc: "学府路74号 | No.74 Xuefu Road",
+        routes: [
+            { to: "主楼", toEn: "To Main Building", 
+              path: "进门直走即是", pathEn: "Straight ahead after entering" },
+            { to: "留学生公寓", toEn: "To Dormitory", 
+              path: "进门后向南走,经过2号教学楼到A区", pathEn: "Go south past Bldg No.2 to Zone A" }
+        ]
+    },
+    ice: {
+        title: "国际文化教育学院 International College",
+        desc: "办理入学、签证、学籍等所有留学生事务 | Handle admission, visa, enrollment",
+        routes: [
+            { to: "从南一门", toEn: "From South Gate 1", 
+              path: "从南一门入校，在左侧第二个路口左转,直行约100米,红色建筑即为国际文化教育学院，到达后在此左转。", pathEn: "Enter the campus from South Gate 1. Take the second turn on the left and walk straight for about 100 meters. The red building is the College of International Culture and Education. Turn left when you get there." }
+        ]
+    },
+    dA: {
+        title: "A区留学生公寓 Zone A Dormitory",
+        desc: "留学生住宿 | International Student Dormitory",
+        extra: "服务台 Service: 8668 4740 | 前台 Front: 8660 8733",
+        routes: [
+            { to: "从南一门", toEn: "From South Gate 1", 
+              path: "从南一门入校，在左侧第二个路口左转,直行约100米,红色建筑即为国际文化教育学院，到达后在此左转。", pathEn: "Enter the campus from South Gate 1. Take the second turn on the left and walk straight for about 100 meters. The red building is the College of International Culture and Education. Turn left when you get there." }
+        ]
+    },
+    lz: {
+        title: "丽泽雅苑 Lize Hotel",
+        desc: "C区留学生住宿酒店 | Zone C international student hotel",
+        extra: "前台 Front Desk: 0451-5510 7888",
+        routes: [
+            { to: "从南三门", toEn: "From South Gate 3", 
+              path: "进门沿右环道行走即可看见丽泽雅苑（灰色建筑）", pathEn: "Enter the area and follow the right roundabout,and you will see Lize Hotel." }
+        ]
+    },
+    mb: {
+        title: "主楼 Main Building",
+        desc: "学校行政中心，标志性建筑 | University administration center",
+        routes: [
+            { to: "从正门", toEn: "From Main Gate", 
+              path: "进门直走即是", pathEn: "Straight ahead after entering" }
+        ]
+    },
+    lib: {
+        title: "图书馆 Library",
+        desc: "凭学生卡进入 | Student card required",
+        routes: [
+            { to: "位置", toEn: "Location", 
+              path: "联通广场东侧，主楼后方", pathEn: "East of Square, behind Main Building" }
+        ]
+    },
+    ca: {
+        title: "A区食堂 Canteen A",
+        desc: "距离留学生公寓最近的食堂 | Closest canteen to dorm",
+        routes: [
+            { to: "位置", toEn: "Location", 
+              path: "留学生公寓东侧,步行约2分钟", pathEn: "East of dorm, 2-minute walk" }
+        ]
+    },
+    cli: {
+        title: "校医院 Campus Clinic",
+        desc: "24小时急诊服务 | 24h emergency service",
+        extra: "急诊电话 Emergency: 8660 8120",
+        routes: [
+            { to: "位置", toEn: "Location", 
+              path: "1号教学楼对面", pathEn: "Opposite of Bldg No.1" }
+        ]
+    },
+    pol: {
+        title: "保卫处 Campus Security",
+        desc: "校园安全、紧急求助 | Campus safety & emergency",
+        extra: "报警电话 Emergency: 8660 9110",
+        routes: [
+            { to: "位置", toEn: "Location", 
+              path: "2号楼右侧", pathEn: "Right of Bldg No.2" }
+        ]
+    }
+};
+
+// ============================================
+// 4. 话术配置
+// ============================================
+const PHRASES = {
+    taxi: [
+        {
+            zone: "A区 Zone A",
+            zoneColor: "border-zone-a",
+            title: "去A区留学生公寓 To Zone A Dormitory",
+            chinese: "师傅您好，请带我去黑龙江大学南一门，学府路与学府四道街交叉口。",
+            english: "Hello driver, please take me to South Gate 1 of Heilongjiang University, at the intersection of Xuefu Road and Xuefu 4th Street."
+        },
+        {
+            zone: "C区 Zone C",
+            zoneColor: "border-zone-c",
+            title: "去C区丽泽雅苑酒店 To Zone C Lize Hotel",
+            chinese: "师傅您好，请带我去黑龙江大学南三门，学府四道街上。",
+            english: "Hello driver, please take me to South Gate 3 of Heilongjiang University, on Xuefu 4th Street."
+        },
+        {
+            zone: "正门 Main Gate",
+            zoneColor: "border-blue-500",
+            title: "去黑龙江大学正门 To HLJU Main Gate",
+            chinese: "师傅您好,请带我去黑龙江大学正门,学府路74号。",
+            english: "Hello driver, please take me to the Main Gate of Heilongjiang University, No. 74 Xuefu Road."
+        }
+    ],
+    taxiCommon: [
+        { cn: "请问多少钱？", en: "How much is it?" },
+        { cn: "请打表。", en: "Please use the meter." },
+        { cn: "麻烦快一点，我赶时间。", en: "Please hurry, I'm in a rush." },
+        { cn: "请开慢点。", en: "Please drive slowly." },
+        { cn: "就在这里停，谢谢。", en: "Stop here please, thank you." },
+        { cn: "我可以用支付宝/微信支付吗？", en: "Can I pay with Alipay/WeChat Pay?" }
+    ],
+    ask: [
+        {
+            category: "问留学生公寓/学院 Dormitory/College",
+            icon: "fa-graduation-cap",
+            color: "text-zone-a",
+            items: [
+                { cn: "您好，请问国际文化教育学院怎么走？", en: "Excuse me, how do I get to the International College?" },
+                { cn: "请问A区留学生公寓在哪里?", en: "Where is the Zone A international student dormitory?" },
+                { cn: "请问丽泽雅苑酒店怎么走？", en: "How do I get to Lize Hotel?" }
+            ]
+        },
+        {
+            category: "问教学楼/图书馆 Buildings/Library",
+            icon: "fa-building",
+            color: "text-zone-b",
+            items: [
+                { cn: "您好,请问1号教学楼怎么走?", en: "Excuse me, where is Teaching Building No.1?" },
+                { cn: "请问图书馆在哪里?", en: "Where is the library?" },
+                { cn: "请问主楼怎么走?", en: "How do I get to the Main Building?" }
+            ]
+        }
+    ],
+    askCommon: [
+        { cn: "离这里远吗？", en: "Is it far from here?" },
+        { cn: "走路要多久？", en: "How long to walk there?" },
+        { cn: "可以带我去吗？", en: "Can you show me the way?" },
+        { cn: "直走吗？", en: "Go straight?" },
+        { cn: "向左转还是向右转？", en: "Turn left or right?" },
+        { cn: "非常感谢！", en: "Thank you very much!" }
+    ],
+    life: {
+        canteen: [
+            { cn: "这个多少钱？", en: "How much is this?" },
+            { cn: "我要这个，谢谢。", en: "I want this, thank you." },
+            { cn: "请少放辣。", en: "Less spicy, please." },
+            { cn: "请不要放葱/姜/蒜。", en: "No scallion/ginger/garlic, please." },
+            { cn: "打包带走。", en: "Take away, please." },
+            { cn: "在这里吃。", en: "For here, please." },
+            { cn: "筷子在哪里？", en: "Where are the chopsticks?" },
+            { cn: "可以微信支付吗？", en: "Can I pay with WeChat?" },
+            { cn: "可以支付宝吗？", en: "Can I use Alipay?" }
+        ],
+        shopping: [
+            { cn: "请问这个在哪里？", en: "Where is this?" },
+            { cn: "一共多少钱？", en: "How much in total?" },
+            { cn: "我要一个塑料袋。", en: "I need a plastic bag." },
+            { cn: "保质期到什么时候？", en: "When is the expiration date?" },
+            { cn: "有打折吗？", en: "Is there a discount?" },
+            { cn: "可以刷卡吗？", en: "Can I pay by card?" }
+        ],
+        daily: [
+            { cn: "我不会说中文，请说慢一点。", en: "I don't speak Chinese well, please speak slowly." },
+            { cn: "你会说英语吗？", en: "Do you speak English?" },
+            { cn: "我需要帮助。", en: "I need help." },
+            { cn: "卫生间在哪里？", en: "Where is the restroom?" },
+            { cn: "我迷路了。", en: "I'm lost." },
+            { cn: "可以帮我拍张照吗？", en: "Can you take a photo for me?" },
+            { cn: "请问现在几点？", en: "What time is it now?" },
+            { cn: "请问WiFi密码是什么?", en: "What's the WiFi password?" },
+            { cn: "我的手机没电了。", en: "My phone is out of battery." },
+            { cn: "附近哪里有AT?", en: "Where is the nearest ATM?" }
+        ]
+    }
+};
+</script>
+<!-- ==================== 配置区域结束 ==================== -->
+
+    <!-- Header -->
+    <header class="bg-hlju text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="text-center">
+                <h1 class="text-xl font-bold"><i class="fa-solid fa-map-location-dot mr-2"></i>HLJU Student Guide</h1>
+                <p class="text-blue-100 text-sm">黑龙江大学留学生导航</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <div class="bg-white shadow-sm sticky top-[72px] z-40">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-around">
+                <button id="tab-map" class="tab-active py-3 px-2 text-xs sm:text-sm" onclick="switchTab('map')">
+                    <i class="fa-solid fa-map mr-1"></i>地图<span class="hidden sm:inline"> Map</span>
+                </button>
+                <button id="tab-taxi" class="py-3 px-2 text-xs sm:text-sm text-gray-600" onclick="switchTab('taxi')">
+                    <i class="fa-solid fa-taxi mr-1"></i>打车<span class="hidden sm:inline"> Taxi</span>
+                </button>
+                <button id="tab-ask" class="py-3 px-2 text-xs sm:text-sm text-gray-600" onclick="switchTab('ask')">
+                    <i class="fa-solid fa-person-walking mr-1"></i>问路<span class="hidden sm:inline"> Ask</span>
+                </button>
+                <button id="tab-phone" class="py-3 px-2 text-xs sm:text-sm text-gray-600" onclick="switchTab('phone')">
+                    <i class="fa-solid fa-phone mr-1"></i>电话<span class="hidden sm:inline"> Phone</span>
+                </button>
+                <button id="tab-life" class="py-3 px-2 text-xs sm:text-sm text-gray-600" onclick="switchTab('life')">
+                    <i class="fa-solid fa-utensils mr-1"></i>生活<span class="hidden sm:inline"> Life</span>
+                </button>
+                <button id="tab-share" class="py-3 px-2 text-xs sm:text-sm text-gray-600" onclick="switchTab('share')">
+                    <i class="fa-solid fa-qrcode mr-1"></i>分享<span class="hidden sm:inline"> Share</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="container mx-auto px-4 py-6 max-w-5xl">
+        
+        <!-- MAP SECTION -->
+        <div id="section-map" class="space-y-6">
+            <!-- Legend -->
+            <div class="bg-white rounded-xl shadow-md p-4">
+                <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <div class="flex items-center"><div class="w-5 h-5 bg-zone-a rounded mr-2"></div><span>A区 Zone A</span></div>
+                    <div class="flex items-center"><div class="w-5 h-5 bg-zone-b rounded mr-2"></div><span>B区 Zone B</span></div>
+                    <div class="flex items-center"><div class="w-5 h-5 bg-zone-c rounded mr-2"></div><span>C区 Zone C</span></div>
+                    <div class="flex items-center"><div class="w-5 h-5 bg-dorm rounded mr-2"></div><span>公寓 Dorm</span></div>
+                    <span class="ml-auto text-gray-500 text-xs"><i class="fa-solid fa-hand-pointer mr-1"></i>点击标记查看路线 Click markers</span>
+                </div>
+            </div>
+
+            <!-- Interactive Map -->
+            <div class="bg-white rounded-xl shadow-md p-4">
+                <div class="map-container" id="mapContainer">
+                    <!-- 换地图：修改上面 MAP_CONFIG.imageSrc 的值 -->
+                    <img id="mapImage" src="map.jpg" alt="HLJU Campus Map" class="w-full h-auto rounded-lg">
+                    <!-- Hotspots will be generated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div id="infoCard" class="bg-white rounded-xl shadow-md p-6 hidden">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 id="infoTitle" class="text-xl font-bold text-hlju"></h3>
+                    <button onclick="hideInfo()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+                </div>
+                <div id="infoContent"></div>
+                <div id="infoRoute" class="mt-4 p-4 bg-blue-50 rounded-lg hidden">
+                    <h4 class="font-semibold text-hlju mb-2"><i class="fa-solid fa-route mr-2"></i>路线指引 Directions</h4>
+                    <div id="routeContent"></div>
+                </div>
+            </div>
+
+            <!-- Quick Guide -->
+            <div class="bg-gradient-to-r from-blue-500 to-hlju rounded-xl shadow-md p-6 text-white">
+                <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-compass mr-2"></i>快速导航 Quick Guide</h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="bg-white/10 rounded-lg p-4">
+                        <h4 class="font-semibold mb-1">从南一门 → A区留学生公寓</h4>
+                        <p class="text-sm text-blue-100">进门直走约50米，左手边灰色建筑</p>
+                        <p class="text-xs text-blue-200">Walk 50m from S1, gray building on left</p>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-4">
+                        <h4 class="font-semibold mb-1">从正门 → 国际文化教育学院</h4>
+                        <p class="text-sm text-blue-100">进门向南走，经过2号教学楼</p>
+                        <p class="text-xs text-blue-200">Go south past Bldg No.2</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Building Images -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-bold text-hlju mb-4"><i class="fa-solid fa-building mr-2"></i>建筑标识 Building Identification</h3>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="rounded-lg overflow-hidden shadow-md">
+                        <img src="微信图片_20260601145515_1061_2.jpg" alt="Zone A International Student Dormitory" class="w-full h-48 object-cover">
+                        <div class="p-4 bg-gray-50">
+                            <h4 class="font-bold text-gray-800">A区留学生公寓</h4>
+                            <p class="text-sm text-gray-600">Zone A International Student Dormitory</p>
+                        </div>
+                    </div>
+                    <div class="rounded-lg overflow-hidden shadow-md">
+                        <img src="微信图片_20260601145517_1062_2.jpg" alt="International College" class="w-full h-48 object-cover">
+                        <div class="p-4 bg-gray-50">
+                            <h4 class="font-bold text-gray-800">国际文化教育学院</h4>
+                            <p class="text-sm text-gray-600">International Culture & Education College</p>
+                        </div>
+                    </div>
+                    <div class="rounded-lg overflow-hidden shadow-md">
+                        <img src="map.jpg" alt="HLJU Campus Map" class="w-full h-48 object-cover">
+                        <div class="p-4 bg-gray-50">
+                            <h4 class="font-bold text-gray-800">校园地图</h4>
+                            <p class="text-sm text-gray-600">Campus Map</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAXI SECTION -->
+        <div id="section-taxi" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-2xl font-bold text-hlju mb-2"><i class="fa-solid fa-taxi mr-2"></i>打车话术 Taxi Phrases</h2>
+                <p class="text-gray-500 text-sm mb-6">常用打车对话 Common taxi conversations</p>
+                <div id="taxiContent"></div>
+            </div>
+        </div>
+
+        <!-- ASK SECTION -->
+        <div id="section-ask" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-2xl font-bold text-hlju mb-2"><i class="fa-solid fa-person-walking mr-2"></i>问路话术 Asking for Directions</h2>
+                <p class="text-gray-500 text-sm mb-6">向路人询问方向的常用表达 Common phrases to ask for directions</p>
+                <div id="askContent"></div>
+            </div>
+        </div>
+
+        <!-- PHONE SECTION -->
+        <div id="section-phone" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-2xl font-bold text-hlju mb-2"><i class="fa-solid fa-phone mr-2"></i>常用电话 Phone Numbers</h2>
+                <p class="text-gray-500 text-sm mb-6"><i class="fa-solid fa-circle-info text-blue-500 mr-1"></i>点击号码可直接拨打 Tap to call</p>
+                <div id="phoneContent"></div>
+                <div class="mt-6 p-4 bg-gray-100 rounded-lg">
+                    <p class="text-sm text-gray-600">
+                        <i class="fa-solid fa-triangle-exclamation text-yellow-600 mr-2"></i>
+                        <strong>紧急提示 Emergency:</strong> 如遇紧急情况，请优先拨打保卫处 86609110 或校医院 86608120
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIFE SECTION -->
+        <div id="section-life" class="hidden space-y-6">
+            <div id="lifeContent"></div>
+        </div>
+
+        <!-- SHARE SECTION -->
+        <div id="section-share" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-2xl font-bold text-hlju mb-2"><i class="fa-solid fa-qrcode mr-2"></i>分享导航 Share</h2>
+                <p class="text-gray-500 text-sm mb-6">扫描二维码或复制链接分享给同学</p>
+                
+                <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+                    <!-- QR Code -->
+                    <div class="bg-white border-2 border-gray-200 rounded-xl p-6 shadow-lg">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://jiangyu5368.github.io/HLJU-guide/" alt="QR Code" class="w-48 h-48">
+                        <p class="text-center text-sm text-gray-500 mt-4">扫描二维码访问 Scan to visit</p>
+                    </div>
+                    
+                    <!-- URL -->
+                    <div class="text-center md:text-left">
+                        <div class="bg-gray-100 rounded-lg p-4">
+                            <p class="text-sm text-gray-500 mb-2">网站网址 Website URL:</p>
+                            <p class="font-mono text-hlju break-all">https://jiangyu5368.github.io/HLJU-guide/</p>
+                        </div>
+                        <button onclick="copyUrl()" class="mt-4 px-6 py-2 bg-hlju text-white rounded-lg hover:bg-blue-700 transition">
+                            <i class="fa-solid fa-copy mr-2"></i>复制链接 Copy
+                        </button>
+                        <p id="copySuccess" class="mt-2 text-green-600 text-sm hidden">✓ 已复制 Copied!</p>
+                    </div>
+                </div>
+                
+                <div class="mt-8 p-4 bg-green-50 rounded-lg">
+                    <h3 class="font-bold text-green-700 mb-2"><i class="fa-solid fa-check-circle mr-2"></i>网站已上线 Website is Live!</h3>
+                    <p class="text-sm text-gray-600">留学生可以直接扫描上方二维码或访问网址使用导航功能。</p>
+                    <p class="text-sm text-gray-600 mt-1">International students can scan the QR code or visit the URL to use the navigation.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-gray-300 font-medium">HLJU International Student Guide</p>
+            <p class="text-gray-400 text-sm mt-1">黑龙江大学留学生导航</p>
+            <p class="text-xs text-gray-500 mt-3">
+                联系 Contact: <a href="tel:86608417" class="text-blue-400 hover:underline">8660 8417</a> | 
+                紧急 Emergency: <a href="tel:86609110" class="text-yellow-400 hover:underline">8660 9110</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Initialize Map Hotspots
+        function initMap() {
+            const container = document.getElementById('mapContainer');
+            const img = document.getElementById('mapImage');
+            
+            // Set image source from config
+            img.src = MAP_CONFIG.imageSrc;
+            
+            // Generate hotspots
+            for (const [key, loc] of Object.entries(MAP_CONFIG.locations)) {
+                const hotspot = document.createElement('div');
+                hotspot.className = 'hotspot';
+                hotspot.style.left = loc.left + '%';
+                hotspot.style.top = loc.top + '%';
+                hotspot.onclick = () => showLocation(key);
+                
+                hotspot.innerHTML = `
+                    <div class="hotspot-dot ${loc.color}"></div>
+                    <span class="absolute -top-7 left-1/2 -translate-x-1/2 ${loc.color} text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium">
+                        ${loc.title} ${loc.titleEn}
+                    </span>
+                `;
+                
+                container.appendChild(hotspot);
+            }
+        }
+
+        // Show Location Details
+        function showLocation(id) {
+            const loc = LOCATION_DETAILS[id];
+            if (!loc) return;
+            
+            document.getElementById('infoTitle').textContent = loc.title;
+            
+            let content = `<p class="text-gray-600 mb-3">${loc.desc}</p>`;
+            if (loc.extra) {
+                content += `<p class="text-sm bg-gray-100 p-2 rounded"><i class="fa-solid fa-phone text-green-600 mr-2"></i>${loc.extra}</p>`;
+            }
+            document.getElementById('infoContent').innerHTML = content;
+            
+            if (loc.routes && loc.routes.length > 0) {
+                let routeHtml = '';
+                loc.routes.forEach(r => {
+                    routeHtml += `
+                        <div class="mb-3 pb-3 border-b border-blue-200 last:border-0">
+                            <p class="font-medium text-gray-700">${r.to} | ${r.toEn}</p>
+                            <p class="text-gray-600">${r.path}</p>
+                            <p class="text-sm text-gray-500">${r.pathEn}</p>
+                        </div>
+                    `;
+                });
+                document.getElementById('routeContent').innerHTML = routeHtml;
+                document.getElementById('infoRoute').classList.remove('hidden');
+            } else {
+                document.getElementById('infoRoute').classList.add('hidden');
+            }
+            
+            document.getElementById('infoCard').classList.remove('hidden');
+            document.getElementById('infoCard').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+        }
+
+        function hideInfo() {
+            document.getElementById('infoCard').classList.add('hidden');
+        }
+
+        // Initialize Taxi Content
+        function initTaxi() {
+            let html = '<div class="space-y-4">';
+            
+            // Specific destinations
+            PHRASES.taxi.forEach(p => {
+                html += `
+                    <div class="phrase-card border-l-4 ${p.zoneColor} bg-gray-50 rounded-r-lg p-4">
+                        <div class="flex items-center mb-3">
+                            <span class="bg-gray-600 text-white text-xs px-2 py-1 rounded mr-2">${p.zone}</span>
+                            <h3 class="font-bold">${p.title}</h3>
+                        </div>
+                        <div class="bg-white p-3 rounded mb-2">
+                            <p class="text-gray-700 font-medium">${p.chinese}</p>
+                            <p class="text-sm text-gray-500 mt-1"><i class="fa-solid fa-language text-blue-500 mr-1"></i>${p.english}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Common phrases
+            html += `
+                <div class="phrase-card border-l-4 border-gray-400 bg-gray-50 rounded-r-lg p-4">
+                    <h3 class="font-bold mb-4"><i class="fa-solid fa-comments mr-2"></i>通用话术 Common Phrases</h3>
+                    <div class="grid md:grid-cols-2 gap-3">
+            `;
+            PHRASES.taxiCommon.forEach(p => {
+                html += `
+                    <div class="bg-white p-3 rounded">
+                        <p class="text-gray-700">${p.cn}</p>
+                        <p class="text-sm text-gray-500"><i class="fa-solid fa-language text-blue-500 mr-1"></i>${p.en}</p>
+                    </div>
+                `;
+            });
+            html += '</div></div></div>';
+            
+            document.getElementById('taxiContent').innerHTML = html;
+        }
+
+        // Initialize Ask Content
+        function initAsk() {
+            let html = '<div class="space-y-4">';
+            
+            // Category phrases
+            PHRASES.ask.forEach(cat => {
+                html += `
+                    <div class="phrase-card border-l-4 border-zone-a bg-gray-50 rounded-r-lg p-4">
+                        <div class="flex items-center mb-3">
+                            <i class="fa-solid ${cat.icon} ${cat.color} mr-2"></i>
+                            <h3 class="font-bold">${cat.category}</h3>
+                        </div>
+                        <div class="space-y-2">
+                `;
+                cat.items.forEach(item => {
+                    html += `
+                        <div class="bg-white p-3 rounded">
+                            <p class="text-gray-700">${item.cn}</p>
+                            <p class="text-sm text-gray-500"><i class="fa-solid fa-language text-blue-500 mr-1"></i>${item.en}</p>
+                        </div>
+                    `;
+                });
+                html += '</div></div>';
+            });
+            
+            // Common phrases
+            html += `
+                <div class="phrase-card border-l-4 border-gray-400 bg-gray-50 rounded-r-lg p-4">
+                    <h3 class="font-bold mb-4"><i class="fa-solid fa-circle-question mr-2"></i>通用问路话术 General Phrases</h3>
+                    <div class="grid md:grid-cols-2 gap-3">
+            `;
+            PHRASES.askCommon.forEach(p => {
+                html += `
+                    <div class="bg-white p-3 rounded">
+                        <p class="text-gray-700">${p.cn}</p>
+                        <p class="text-sm text-gray-500"><i class="fa-solid fa-language text-blue-500 mr-1"></i>${p.en}</p>
+                    </div>
+                `;
+            });
+            html += '</div></div></div>';
+            
+            document.getElementById('askContent').innerHTML = html;
+        }
+
+        // Initialize Phone Content
+        function initPhone() {
+            let html = '<div class="space-y-3">';
+            
+            PHONE_NUMBERS.forEach(phone => {
+                const bgClass = phone.bgColor || '';
+                const borderClass = phone.important ? 'border rounded-lg' : 'border-b border-gray-100';
+                
+                html += `
+                    <div class="flex justify-between items-center py-3 px-2 ${bgClass} ${borderClass}">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 ${phone.color} rounded-full flex items-center justify-center mr-3">
+                                <i class="fa-solid ${phone.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium ${phone.important ? 'text-red-700' : ''}">${phone.name}</p>
+                                <p class="text-xs text-gray-500">${phone.nameEn}</p>
+                            </div>
+                        </div>
+                        <a href="tel:${phone.number}" class="${phone.important ? 'text-red-600' : 'text-hlju'} font-bold text-lg hover:underline">
+                            ${phone.number}
+                        </a>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            document.getElementById('phoneContent').innerHTML = html;
+        }
+
+        // Initialize Life Content
+        function initLife() {
+            const sections = [
+                { id: 'canteen', icon: 'fa-utensils', title: '食堂用餐', titleEn: 'Canteen / Dining', items: PHRASES.life.canteen },
+                { id: 'shopping', icon: 'fa-cart-shopping', title: '超市购物', titleEn: 'Shopping', items: PHRASES.life.shopping },
+                { id: 'daily', icon: 'fa-life-ring', title: '其他常用', titleEn: 'Daily Life', items: PHRASES.life.daily }
+            ];
+            
+            let html = '';
+            sections.forEach(sec => {
+                html += `
+                    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                        <h2 class="text-xl font-bold text-hlju mb-2">
+                            <i class="fa-solid ${sec.icon} mr-2"></i>${sec.title} ${sec.titleEn}
+                        </h2>
+                        <div class="grid md:grid-cols-2 gap-3">
+                `;
+                sec.items.forEach(item => {
+                    html += `
+                        <div class="phrase-card bg-gray-50 p-4 rounded-lg">
+                            <p class="font-medium text-gray-700">${item.cn}</p>
+                            <p class="text-sm text-gray-500 mt-2"><i class="fa-solid fa-language text-blue-500 mr-1"></i>${item.en}</p>
+                        </div>
+                    `;
+                });
+                html += '</div></div>';
+            });
+            
+            document.getElementById('lifeContent').innerHTML = html;
+        }
+
+        // Tab Switching
+        function switchTab(tabName) {
+            document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById('section-' + tabName).classList.remove('hidden');
+            
+            document.querySelectorAll('[id^="tab-"]').forEach(el => {
+                el.classList.remove('tab-active');
+                el.classList.add('text-gray-600');
+            });
+            document.getElementById('tab-' + tabName).classList.add('tab-active');
+            document.getElementById('tab-' + tabName).classList.remove('text-gray-600');
+            
+            hideInfo();
+        }
+
+        // Initialize Share Section
+        function initShare() {
+            // 使用固定的网站URL
+            const url = 'https://jiangyu5368.github.io/HLJU-guide/';
+            document.getElementById('currentUrl').textContent = url;
+        }
+        
+        // Copy URL to clipboard
+        function copyUrl() {
+            const url = 'https://jiangyu5368.github.io/HLJU-guide/';
+            navigator.clipboard.writeText(url).then(() => {
+                document.getElementById('copySuccess').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('copySuccess').classList.add('hidden');
+                }, 2000);
+            }).catch(err => {
+                alert('复制失败，请手动复制');
+            });
+        }
+
+        // Initialize everything when page loads
+        window.onload = function() {
+            initMap();
+            initTaxi();
+            initAsk();
+            initPhone();
+            initLife();
+            initShare();
+        };
+    </script>
+</body>
+</html>
